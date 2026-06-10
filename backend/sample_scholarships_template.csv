@@ -1,0 +1,3 @@
+title,provider,amount,deadline,states,courses,categories,incomeLimit,yearLevels,requiredDocuments,applicationLink,description,featured,tags
+Example Scholarship 1,Example Foundation,₹10,000,2026-12-31,All India,UG;PG,General;OBC,500000,1st Year;2nd Year,Aadhaar;Marksheet,https://example.org/apply,An example scholarship for demonstration,true,example
+Example Scholarship 2,State Education Dept,Tuition Fee Support,2026-11-30,Bihar,UG,SC;ST;OBC,200000,Post Matric,Residence Certificate;Caste Certificate,https://state.gov/apply,State scholarship for post-matric students,false,state

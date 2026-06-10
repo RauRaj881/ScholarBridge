@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>ScholarBridge Prototype</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo">SB</div>
+        <div class="brand-text">
+          <strong>ScholarBridge</strong>
+          <small>Find scholarships, check eligibility, and track applications</small>
+        </div>
+      </div>
+      <nav class="nav">
+        <button data-view="landing" class="nav-btn active">Home</button>
+        <button data-view="dashboard" class="nav-btn">Dashboard</button>
+        <button data-view="eligibility" class="nav-btn">Eligibility</button>
+        <button data-view="scholarships" class="nav-btn">Scholarships</button>
+        <button data-view="tracker" class="nav-btn">Tracker</button>
+        <button data-view="admin" class="nav-btn">Admin</button>
+      </nav>
+    </header>
+
+    <main id="app">
+      <section id="landing" class="view active">
+        <div class="hero">
+          <h1>ScholarBridge</h1>
+          <p>Scholarships + Eligibility + AI Guidance — a modern student portal.</p>
+          <div class="hero-actions">
+            <button id="startBtn" class="primary">Get Started</button>
+            <button id="eligibilityBtn" class="ghost">Check Eligibility</button>
+          </div>
+          <ul class="features">
+            <li>AI Recommendations</li>
+            <li>Eligibility Checker</li>
+            <li>Application Tracker</li>
+            <li>Deadline Alerts</li>
+            <li>Admin Panel</li>
+          </ul>
+        </div>
+        <div class="cards">
+          <article>
+            <h3>Student Dashboard</h3>
+            <p>Personalized recommendations, deadlines, and application status.</p>
+          </article>
+          <article>
+            <h3>Eligibility Checker</h3>
+            <p>Enter your details and instantly see matches you can apply for.</p>
+          </article>
+          <article>
+            <h3>AI Assistant</h3>
+            <p>Ask about documents, deadlines, and application links.</p>
+          </article>
+        </div>
+      </section>
+
+      <section id="dashboard" class="view">
+        <div class="panel">
+          <h2>Welcome, Raushan 👋</h2>
+          <div class="stats">
+            <div class="stat"><strong id="stat-eligible">12</strong><small>Eligible</small></div>
+            <div class="stat"><strong id="stat-applied">3</strong><small>Applied</small></div>
+            <div class="stat"><strong id="stat-deadlines">4</strong><small>Deadlines</small></div>
+            <div class="stat"><strong id="stat-notifs">2</strong><small>Notifications</small></div>
+          </div>
+
+          <h3>Recommended For You</h3>
+          <ul class="recommend-list" id="recommend-list">
+            <!-- populated by JS -->
+          </ul>
+        </div>
+      </section>
+
+      <section id="eligibility" class="view">
+        <div class="panel">
+          <h2>Eligibility Checker</h2>
+          <form id="elig-form" class="form-grid">
+            <label>State<input name="state" value="Bihar" /></label>
+            <label>Course<input name="course" value="B.Tech" /></label>
+            <label>Family Income (₹)<input name="income" type="number" value="250000" /></label>
+            <label>Category<select name="category"><option>OBC</option><option>General</option><option>SC</option></select></label>
+            <button class="primary" type="submit">Check Eligibility</button>
+          </form>
+
+          <div id="elig-result" class="result" hidden>
+            <h3>✅ Eligible Scholarships: <span id="elig-count">8</span></h3>
+            <ol id="elig-list"></ol>
+          </div>
+        </div>
+      </section>
+
+      <section id="scholarships" class="view">
+        <div class="panel">
+          <h2>Scholarship Directory</h2>
+          <input id="search" placeholder="Search scholarships, providers, or tags" />
+          <div id="list" class="sch-list"></div>
+        </div>
+      </section>
+
+      <section id="detail" class="view">
+        <div class="panel">
+          <button id="backToList" class="ghost">← Back</button>
+          <h2 id="detail-title">Central Sector Scholarship</h2>
+          <p id="detail-provider">Government of India</p>
+          <div class="detail-meta">
+            <div><strong id="detail-amount">₹20,000/year</strong><small>Amount</small></div>
+            <div><strong id="detail-deadline">31 Oct 2026</strong><small>Deadline</small></div>
+            <div><strong id="detail-elig">Income &lt; 8 Lakh</strong><small>Eligibility</small></div>
+          </div>
+          <h4>Required Documents</h4>
+          <ul id="detail-docs"></ul>
+          <div class="actions">
+            <button id="applyNow" class="primary">Apply Now</button>
+            <button id="saveBtn" class="ghost">Save</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="tracker" class="view">
+        <div class="panel">
+          <h2>My Applications</h2>
+          <table class="app-table">
+            <thead><tr><th>Scholarship</th><th>Status</th><th>Submitted</th><th>Next Action</th></tr></thead>
+            <tbody id="apps"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="admin" class="view">
+        <div class="panel">
+          <h2>Admin Dashboard</h2>
+          <div class="admin-grid">
+            <div>
+              <h3>Metrics</h3>
+              <ul>
+                <li>Total Users: <strong>12,540</strong></li>
+                <li>Scholarships: <strong>150</strong></li>
+                <li>Applications: <strong>4,230</strong></li>
+              </ul>
+            </div>
+            <div>
+              <h3>Add Scholarship</h3>
+              <form id="admin-form" class="stack-form">
+                <input name="title" placeholder="Title" />
+                <input name="provider" placeholder="Provider" />
+                <input name="deadline" placeholder="Deadline (YYYY-MM-DD)" />
+                <button class="primary" type="submit">Add</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <button id="chatFab" class="chat-fab">🤖 Ask ScholarBridge</button>
+    <aside id="chat" class="chat" hidden>
+      <div class="chat-head"><strong>ScholarBridge AI</strong><button id="closeChat" class="ghost">✕</button></div>
+      <div id="chatStream" class="chat-stream"></div>
+      <div class="chat-controls">
+        <input id="chatInput" placeholder="Ask about eligibility, docs, deadlines..." />
+        <button id="sendChat" class="primary">Send</button>
+      </div>
+    </aside>
+
+    <script src="./prototype.js"></script>
+  </body>
+</html>
