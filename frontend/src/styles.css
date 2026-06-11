@@ -179,7 +179,7 @@ h1, h2, h3, h4, p { margin-top: 0; }
 	border: 1px solid var(--border);
 	border-radius: 20px;
 	padding: 20px;
-	transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+	transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
 }
 
 .card { cursor: pointer; }
@@ -389,3 +389,56 @@ select.theme-switcher option {
 	.hero, .topbar, .section-head, .detail-header { flex-direction: column; align-items: start; }
 	.topbar-actions, .hero-actions { justify-content: start; }
 }
+.carousel-container {
+    transition: none !important;
+}
+
+/* Distinct Glassmorphic Panel Variations */
+.panel-overview {
+  border-color: rgba(110, 168, 254, 0.28);
+  background: radial-gradient(circle at top right, rgba(110, 168, 254, 0.08), var(--panel));
+  box-shadow: 0 16px 40px rgba(110, 168, 254, 0.08);
+}
+
+.panel-eligibility {
+  border-color: rgba(16, 185, 129, 0.28);
+  background: radial-gradient(circle at top right, rgba(16, 185, 129, 0.08), var(--panel));
+  box-shadow: 0 16px 40px rgba(16, 185, 129, 0.08);
+}
+
+.panel-applications, .panel-admin-applications {
+  border-color: rgba(236, 72, 153, 0.28);
+  background: radial-gradient(circle at top right, rgba(236, 72, 153, 0.08), var(--panel));
+  box-shadow: 0 16px 40px rgba(236, 72, 153, 0.08);
+}
+
+.panel-notifications {
+  border-color: rgba(168, 85, 247, 0.28);
+  background: radial-gradient(circle at top right, rgba(168, 85, 247, 0.08), var(--panel));
+  box-shadow: 0 16px 40px rgba(168, 85, 247, 0.08);
+}
+
+.chat-panel {
+  border-color: rgba(139, 92, 246, 0.4);
+  background: radial-gradient(circle at top right, rgba(139, 92, 246, 0.08), var(--panel));
+  box-shadow: 0 16px 40px rgba(139, 92, 246, 0.08);
+}
+
+/* Destructive Sign-out Button Styling */
+.btn-signout {
+  border: 1px solid rgba(248, 113, 113, 0.35) !important;
+  background: rgba(248, 113, 113, 0.05) !important;
+  color: #fca5a5 !important;
+  font-weight: 500 !important;
+  padding: 8px 16px !important;
+  margin-top: 0 !important;
+  border-radius: 10px !important;
+}
+
+.btn-signout:hover {
+  background: linear-gradient(135deg, #f87171, #ef4444) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3) !important;
+}
+

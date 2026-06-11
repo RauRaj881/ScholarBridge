@@ -1,102 +1,169 @@
 import express from 'express';
-import Scholarship from '../models/Scholarship.js';
-import { requireAuth, requireAdmin } from '../middleware/auth.js';
-import Application from '../models/Application.js';
-import Notification from '../models/Notification.js';
-import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
+import mongoose from 'mongoose';
 
 const router = express.Router();
 
-// ensure upload dir
-const uploadDir = path.join(process.cwd(), 'uploads');
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, uploadDir),
-  filename: (_req, file, cb) => cb(null, `${Date.now()}-${file.originalname.replace(/\s+/g,'_')}`)
-});
-const upload = multer({ storage });
+// ─────────────────────────────────────────────────────────────────────────────
+// 1. DATABASE SCHEMA & MODEL DEFINITIONS
+// ─────────────────────────────────────────────────────────────────────────────
 
-// public list
+const EligibilitySchema = new mongoose.Schema(
+  {
+    states: [{ type: String }],
+    courses: [{ type: String }],
+    categories: [{ type: String }],
+    incomeLimit: { type: Number },
+    yearLevel: { type: String },
+  },
+  { _id: false }
+);
+
+const ScholarshipSchema = new mongoose.Schema(
+  {
+    title: { type: String, required: true },
+    provider: { type: String, required: true },
+    amount: String,
+    deadline: Date,
+    eligibility: EligibilitySchema, // Nested eligibility sub‑document
+    
+    // Top-level fields for backwards compatibility with frontend & legacy seed scripts
+    states: [{ type: String }],
+    courses: [{ type: String }],
+    categories: [{ type: String }],
+    incomeLimit: { type: Number },
+    yearLevels: [{ type: String }],
+    requiredDocuments: [String],
+    applicationLink: String,
+    status: { type: String, default: 'Open' },
+    tags: [String],
+    description: String,
+    featured: { type: Boolean, default: false },
+    
+    // Metadata fields for live ingestion tracking
+    sourcePortal: { type: String, enum: ['NSP', 'Bihar-PMS', 'Private', 'Manual'], default: 'Manual' },
+    externalLink: String,
+    isLive: { type: Boolean, default: false }
+  }, 
+  { timestamps: true }
+);
+
+// Optimize database search speeds (avoiding parallel array multikey restrictions)
+ScholarshipSchema.index({ 'eligibility.states': 1 });
+ScholarshipSchema.index({ 'eligibility.categories': 1 });
+
+// Automatically sync top-level and nested eligibility fields during atomic database operations
+ScholarshipSchema.pre('save', function (next) {
+  if (!this.eligibility) {
+    this.eligibility = {};
+  }
+
+  // Sync states
+  if (this.states && this.states.length) {
+    this.eligibility.states = this.states;
+  } else if (this.eligibility.states && this.eligibility.states.length) {
+    this.states = this.eligibility.states;
+  }
+
+  // Sync courses
+  if (this.courses && this.courses.length) {
+    this.eligibility.courses = this.courses;
+  } else if (this.eligibility.courses && this.eligibility.courses.length) {
+    this.courses = this.eligibility.courses;
+  }
+
+  // Sync categories
+  if (this.categories && this.categories.length) {
+    this.eligibility.categories = this.categories;
+  } else if (this.eligibility.categories && this.eligibility.categories.length) {
+    this.categories = this.eligibility.categories;
+  }
+
+  // Sync incomeLimit
+  if (this.incomeLimit !== undefined) {
+    this.eligibility.incomeLimit = this.incomeLimit;
+  } else if (this.eligibility.incomeLimit !== undefined) {
+    this.incomeLimit = this.eligibility.incomeLimit;
+  }
+
+  // Sync yearLevels <-> yearLevel (convert array to single string / vice versa)
+  if (this.yearLevels && this.yearLevels.length) {
+    this.eligibility.yearLevel = this.yearLevels[0];
+  } else if (this.eligibility.yearLevel) {
+    this.yearLevels = [this.eligibility.yearLevel];
+  }
+
+  next();
+});
+
+// Enforce model compiling patterns safely
+const Scholarship = mongoose.models.Scholarship || mongoose.model('Scholarship', ScholarshipSchema);
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 2. EXPRESS CONTROLLER ROUTING ENDPOINTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * @route   GET /api/scholarships
+ * @desc    Fetch active ingestion opportunities to populate the frontend Overview grid
+ */
 router.get('/', async (req, res) => {
-  const items = await Scholarship.find().sort({ featured: -1, deadline: 1 }).limit(200);
-  res.json({ scholarships: items });
-});
-
-router.get('/eligibility', async (req, res) => {
-  const {
-    state,
-    course,
-    category,
-    income,
-    yearLevel,
-    search,
-  } = req.query;
-
-  const scholarships = await Scholarship.find({ status: 'Open' }).sort({ featured: -1, deadline: 1 });
-  const incomeValue = Number(income || 0);
-
-  const matched = scholarships.filter((scholarship) => {
-    const matchesState = !state || !scholarship.states?.length || scholarship.states.some((item) => item.toLowerCase().includes(state.toLowerCase()));
-    const matchesCourse = !course || !scholarship.courses?.length || scholarship.courses.some((item) => item.toLowerCase().includes(course.toLowerCase()));
-    const matchesCategory = !category || !scholarship.categories?.length || scholarship.categories.some((item) => item.toLowerCase().includes(category.toLowerCase()));
-    const matchesYear = !yearLevel || !scholarship.yearLevels?.length || scholarship.yearLevels.some((item) => item.toLowerCase().includes(yearLevel.toLowerCase()));
-    const matchesIncome = !incomeValue || !scholarship.incomeLimit || incomeValue <= scholarship.incomeLimit;
-    const matchesSearch = !search || [scholarship.title, scholarship.provider, scholarship.description].join(' ').toLowerCase().includes(search.toLowerCase());
-
-    return matchesState && matchesCourse && matchesCategory && matchesYear && matchesIncome && matchesSearch;
-  });
-
-  res.json({ count: matched.length, scholarships: matched });
-});
-
-router.get('/:id', async (req, res) => {
-  const item = await Scholarship.findById(req.params.id);
-  if (!item) return res.status(404).json({ message: 'Not found' });
-  res.json({ scholarship: item });
-});
-
-// apply to a scholarship (multipart file upload)
-router.post('/:id/apply', requireAuth, upload.array('documents', 5), async (req, res) => {
   try {
-    const scholarshipId = req.params.id;
-    const userId = req.user._id;
-    const scholarship = await Scholarship.findById(scholarshipId).lean();
-    const docs = (req.files || []).map(f => ({ originalName: f.originalname, fileName: f.filename, path: path.relative(process.cwd(), f.path), size: f.size, mimeType: f.mimetype }));
-    const application = await Application.create({ userId, scholarshipId, documents: docs, status: 'submitted', submittedOn: new Date() });
-    await Notification.create({
-      userId,
-      type: 'success',
-      title: 'Application submitted',
-      message: scholarship ? `Your application for ${scholarship.title} was received.` : 'Your application was received.',
-      applicationId: application._id,
-      scholarshipId,
+    // 1. Look for live, automated ingestion pipeline opportunities first
+    let catalog = await Scholarship.find({ isLive: true }).sort({ featured: -1 }).lean();
+    
+    // 2. Safe Fallback: If the scraper hasn't run or collection is clearing, pull all items
+    if (!catalog || catalog.length === 0) {
+      catalog = await Scholarship.find({}).sort({ createdAt: -1 }).lean();
+    }
+    
+    // 3. Object Wrapper Interface: Sends the keys exactly matching 'r.data.scholarships'
+    return res.json({ 
+      success: true,
+      scholarships: catalog 
     });
-    res.status(201).json({ application });
-  } catch (err) {
-    console.error('Apply error', err);
-    res.status(500).json({ message: 'Apply failed' });
+  } catch (error) {
+    console.error('❌ Base Catalog Routing Error [GET /]:', error.message);
+    return res.status(500).json({ 
+      success: false, 
+      scholarships: [],
+      message: 'Failed to extract active scholarship options',
+      error: error.message 
+    });
   }
 });
 
-// admin creates/edits
-router.post('/', requireAuth, requireAdmin, async (req, res) => {
-  const payload = req.body;
-  const item = await Scholarship.create(payload);
-  res.status(201).json({ scholarship: item });
-});
+/**
+ * @route   POST /api/scholarships/eligibility
+ * @desc    Execute index-optimized matching checks across data arrays for the Eligibility component
+ */
+router.post('/eligibility', async (req, res) => {
+  try {
+    const { state, category, course, income } = req.body;
+    
+    // Build filter target query
+    const filterQuery = { isLive: true };
 
-router.put('/:id', requireAuth, requireAdmin, async (req, res) => {
-  const item = await Scholarship.findByIdAndUpdate(req.params.id, req.body, { new: true });
-  if (!item) return res.status(404).json({ message: 'Not found' });
-  res.json({ scholarship: item });
-});
+    if (state) {
+      filterQuery['eligibility.states'] = state;
+    }
+    if (category) {
+      filterQuery['eligibility.categories'] = category;
+    }
+    if (course) {
+      filterQuery['eligibility.courses'] = course;
+    }
+    if (income) {
+      // Find entries where student's annual household income sits under the scholarship limit
+      filterQuery['eligibility.incomeLimit'] = { $gte: Number(income) };
+    }
 
-router.delete('/:id', requireAuth, requireAdmin, async (req, res) => {
-  const item = await Scholarship.findByIdAndDelete(req.params.id);
-  if (!item) return res.status(404).json({ message: 'Not found' });
-  res.json({ ok: true });
+    const filteredRecords = await Scholarship.find(filterQuery).lean();
+    return res.json(filteredRecords);
+  } catch (error) {
+    console.error('❌ Eligibility Filter Exception [POST /eligibility]:', error.message);
+    return res.status(500).json({ success: false, message: 'Database filtering exception' });
+  }
 });
 
 export default router;

@@ -12,7 +12,7 @@ export default function Applications() {
   }, [])
 
   return (
-    <section className="panel">
+    <section className="panel panel-applications">
       <div className="section-head">
         <div>
           <p className="eyebrow">Application Tracker</p>

@@ -36,7 +36,7 @@ export default function AdminApplications() {
   }
 
   return (
-    <section className="panel">
+    <section className="panel panel-admin-applications">
       <div className="section-head">
         <div>
           <p className="eyebrow">Admin Review</p>

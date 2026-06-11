@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react'
-import axios from 'axios'
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+import { GraduationCap } from 'lucide-react';
 
 export default function Nav({ user, onLogout }) {
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'indigo')
@@ -27,9 +28,14 @@ export default function Nav({ user, onLogout }) {
 
   return (
     <div className="topbar">
-      <div>
-        <strong>ScholarBridge</strong>
-        <div className="muted">Open Bharosa Scholarship Hub</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ background: 'var(--accent-gradient)', padding: '8px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <GraduationCap size={20} color="#fff" />
+        </div>
+        <div>
+          <strong style={{ fontSize: '1.2rem', fontWeight: 800 }}>ScholarBridge</strong>
+          <div className="muted" style={{ fontSize: '0.8rem' }}>ScholarBridge AI Hub</div>
+        </div>
       </div>
       <div className="topbar-actions">
         <select 
@@ -62,7 +68,7 @@ export default function Nav({ user, onLogout }) {
           <option value="amethyst">🔮 Amethyst Glow</option>
         </select>
         <span>{user.name} ({user.role})</span>
-        <button onClick={logout}>Sign out</button>
+        <button className="btn-signout" onClick={logout}>Sign out</button>
       </div>
     </div>
   )

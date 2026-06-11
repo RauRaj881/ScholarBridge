@@ -75,7 +75,7 @@ export default function DrawerChat({ isOpen, onClose, children }: DrawerChatProp
         <div className="flex items-center justify-between p-4 border-b border-slate-800 bg-slate-900/50">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-            <span className="font-semibold text-sm text-slate-300 tracking-wide uppercase">Open Bharosa AI</span>
+            <span className="font-semibold text-sm text-slate-300 tracking-wide uppercase">ScholarBridge AI</span>
           </div>
           <button
             onClick={onClose}

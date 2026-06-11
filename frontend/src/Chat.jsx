@@ -74,7 +74,7 @@ export default function Chat() {
       const detail = err?.response?.data?.error || err?.message || ''
       const msg = detail.includes('quota') || detail.includes('QUOTA')
         ? '⚠️ Gemini quota limit reached. Please wait a minute and try again.'
-        : '❌ Could not reach Open Bharosa. Please check your internet connection or try again.'
+        : '❌ Could not reach ScholarBridge AI. Please check your internet connection or try again.'
       appendMessage('assistant', msg)
     } finally {
       setLoading(false)
@@ -110,7 +110,7 @@ export default function Chat() {
       <div className="chat-window">
         {messages.length === 0 && (
           <div className="chat-placeholder">
-            <p className="muted">नमस्ते! I am <strong>Open Bharosa</strong>. Ask me anything about scholarships, eligibility, or application processes!</p>
+            <p className="muted">नमस्ते! I am <strong>ScholarBridge AI</strong>. Ask me anything about scholarships, eligibility, or application processes!</p>
             <div className="quick-chips">
               {getQuickQuestions().map((q, idx) => (
                 <button key={idx} className="quick-chip-btn" onClick={() => send(q)}>
@@ -122,7 +122,7 @@ export default function Chat() {
         )}
         {messages.map((m, i) => (
           <div key={i} className={`chat-bubble-container ${m.role}`}>
-            <div className="chat-bubble-author">{m.role === 'user' ? 'You' : 'Open Bharosa'}</div>
+            <div className="chat-bubble-author">{m.role === 'user' ? 'You' : 'ScholarBridge AI'}</div>
             <div className={`chat-bubble ${m.role}`}>
               <span className="chat-text">{m.content}</span>
               {m.recommendations?.length ? (
@@ -139,7 +139,7 @@ export default function Chat() {
         ))}
         {loading && (
           <div className="chat-bubble-container assistant">
-            <div className="chat-bubble-author">Open Bharosa</div>
+            <div className="chat-bubble-author">ScholarBridge AI</div>
             <div className="chat-bubble assistant typing-indicator">
               <span>Thinking...</span>
             </div>
@@ -153,7 +153,7 @@ export default function Chat() {
           value={input} 
           onChange={e => setInput(e.target.value)} 
           onKeyDown={e => e.key === 'Enter' && send()}
-          placeholder="Type your message to Open Bharosa..." 
+          placeholder="Type your message to ScholarBridge AI..." 
         />
         <button className="primary" onClick={() => send()} disabled={loading}>Send</button>
         <button className="secondary" onClick={recommend} disabled={loading}>Recommend</button>

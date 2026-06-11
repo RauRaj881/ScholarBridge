@@ -10,6 +10,15 @@ const initialForm = {
   search: '',
 }
 
+// Sorted list of Indian States and Union Territories
+const indianStates = [
+  "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chandigarh", "Chhattisgarh", 
+  "Delhi", "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jammu and Kashmir", 
+  "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", 
+  "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", 
+  "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal"
+].sort();
+
 const fieldLabels = {
   state: 'State',
   course: 'Course',
@@ -20,6 +29,7 @@ const fieldLabels = {
 }
 
 const fieldOptions = {
+  state: indianStates,
   category: ['General', 'OBC', 'SC', 'ST', 'EBC'],
   yearLevel: ['1st Year', '2nd Year', '3rd Year', '4th Year', 'Post Matric'],
   course: ['10+2', 'UG', 'PG', 'Diploma', 'PhD'],
@@ -37,11 +47,9 @@ export default function EligibilityChecker({ onSelectScholarship }) {
     setLoading(true)
     setError('')
     try {
-      const params = new URLSearchParams()
-      Object.entries(form).forEach(([key, value]) => value && params.set(key, value))
-      const res = await axios.get(`/api/scholarships/eligibility?${params.toString()}`)
-      setResults(res.data.scholarships || [])
-      setCount(res.data.count || 0)
+      const res = await axios.post('/api/scholarships/eligibility', form)
+      setResults(res.data || [])
+      setCount(res.data.length || 0)
     } catch (err) {
       setError(err.response?.data?.message || 'Could not check eligibility')
     } finally {
@@ -50,7 +58,7 @@ export default function EligibilityChecker({ onSelectScholarship }) {
   }
 
   return (
-    <section className="panel">
+    <section className="panel panel-eligibility">
       <div className="section-head">
         <div>
           <p className="eyebrow">Eligibility Checker</p>
@@ -63,7 +71,17 @@ export default function EligibilityChecker({ onSelectScholarship }) {
           <label key={key} className="field">
             <span>{fieldLabels[key] || key}</span>
             {fieldOptions[key] ? (
-              <select value={value} onChange={(e) => setForm((s) => ({ ...s, [key]: e.target.value }))}>
+              <select 
+                style={{ 
+                  backgroundColor: '#f8f9fa', 
+                  color: '#333333', 
+                  border: '1px solid #ced4da',
+                  padding: '8px',
+                  borderRadius: '4px'
+                }} 
+                value={value} 
+                onChange={(e) => setForm((s) => ({ ...s, [key]: e.target.value }))}
+              >
                 <option value="">Any</option>
                 {fieldOptions[key].map((option) => <option key={option} value={option}>{option}</option>)}
               </select>

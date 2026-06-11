@@ -27,7 +27,7 @@ export default function NotificationsCenter() {
   }
 
   return (
-    <section className="panel">
+    <section className="panel panel-notifications">
       <div className="section-head">
         <div>
           <p className="eyebrow">Notifications Center</p>

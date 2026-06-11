@@ -89,12 +89,12 @@ router.post('/chat', requireAuth, async (req, res) => {
       return res.json({
         mode: 'local',
         reply:
-          'Hi! I am Open Bharosa. Gemini AI is not active yet — add your GEMINI_API_KEY in backend/.env and restart the server to unlock real AI replies.',
+          'Hi! I am ScholarBridge AI. Gemini AI is not active yet — add your GEMINI_API_KEY in backend/.env and restart the server to unlock real AI replies.',
         recommendations: [],
       });
     }
 
-    const systemPrompt = `You are "Open Bharosa", a friendly AI assistant for the ScholarBridge scholarship portal in India.
+    const systemPrompt = `You are "ScholarBridge AI", a friendly AI assistant for the ScholarBridge scholarship portal in India.
 Help students find, understand and apply for scholarships.
 Keep answers clear, concise and helpful. Respond in the same language the user writes in.`;
 
@@ -126,8 +126,64 @@ router.post('/recommend', requireAuth, async (req, res) => {
       });
     }
 
-    const scholarships = await Scholarship.find({}).lean();
-    const systemPrompt = `You are "Open Bharosa", an AI recommendation engine.
+    const user = req.user || {};
+    const andConditions = [];
+
+    if (user.state) {
+      andConditions.push({
+        $or: [
+          { 'eligibility.states': { $exists: false } },
+          { 'eligibility.states': { $size: 0 } },
+          { 'eligibility.states': { $regex: new RegExp(user.state, 'i') } },
+          { 'eligibility.states': { $regex: /All India/i } }
+        ]
+      });
+    }
+
+    if (user.course) {
+      andConditions.push({
+        $or: [
+          { 'eligibility.courses': { $exists: false } },
+          { 'eligibility.courses': { $size: 0 } },
+          { 'eligibility.courses': { $regex: new RegExp(user.course, 'i') } }
+        ]
+      });
+    }
+
+    if (user.category) {
+      andConditions.push({
+        $or: [
+          { 'eligibility.categories': { $exists: false } },
+          { 'eligibility.categories': { $size: 0 } },
+          { 'eligibility.categories': { $regex: new RegExp(user.category, 'i') } }
+        ]
+      });
+    }
+
+    if (user.income !== undefined && user.income !== null) {
+      andConditions.push({
+        $or: [
+          { 'eligibility.incomeLimit': { $exists: false } },
+          { 'eligibility.incomeLimit': null },
+          { 'eligibility.incomeLimit': { $gte: user.income } }
+        ]
+      });
+    }
+
+    const query = { status: 'Open' };
+    if (andConditions.length > 0) {
+      query.$and = andConditions;
+    }
+
+    // Retrieve matching scholarships to ground the prompt
+    let scholarships = await Scholarship.find(query).limit(10).lean();
+
+    // Fallback: If no scholarships match this specific criteria, load open scholarships
+    if (!scholarships || scholarships.length === 0) {
+      scholarships = await Scholarship.find({ status: 'Open' }).limit(10).lean();
+    }
+
+    const systemPrompt = `You are "ScholarBridge AI", an AI recommendation engine.
 Given a student profile, output exactly 5 scholarship recommendations as a valid JSON array.
 Each object must have: "title", "provider", "amount", "id" — using IDs from the catalog below.
 Output raw JSON only. No markdown, no code fences.
