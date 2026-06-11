@@ -6,7 +6,11 @@ import mongoose from 'mongoose';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-dotenv.config();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
 
 import authRoutes from './routes/auth.js';
 import scholarshipRoutes from './routes/scholarships.js';
@@ -37,8 +41,7 @@ app.use('/api/import', importRoutes);
 
 app.get('/api/health', (req, res) => res.json({ ok: true, service: 'ScholarBridge API' }));
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+
 
 const uploadsPath = path.join(process.cwd(), 'uploads');
 app.use('/uploads', express.static(uploadsPath));

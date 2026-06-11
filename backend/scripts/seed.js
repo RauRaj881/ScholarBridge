@@ -3,6 +3,7 @@ import dotenv from 'dotenv'
 import User from '../src/models/User.js'
 import Scholarship from '../src/models/Scholarship.js'
 import bcrypt from 'bcrypt'
+import { scholarships } from './scholarships_data.js'
 
 dotenv.config()
 
@@ -18,38 +19,9 @@ async function main() {
   const userPass = await bcrypt.hash('studentpass', 10)
   const user = await User.create({ name: 'Student', email: 'student@example.com', password: userPass, role: 'student' })
 
-  const samples = [
-    {
-      title: 'Central Sector Scholarship',
-      provider: 'Government of India',
-      amount: '₹20,000/year',
-      deadline: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
-      states: ['All India'],
-      courses: ['UG', 'PG'],
-      categories: ['General', 'OBC', 'SC', 'ST'],
-      incomeLimit: 800000,
-      yearLevels: ['1st Year', '2nd Year', '3rd Year', '4th Year'],
-      requiredDocuments: ['Aadhaar', 'Income Certificate', 'Marksheet'],
-      description: 'Merit-based scholarship for higher education students.',
-      featured: true,
-    },
-    {
-      title: 'Bihar Post Matric Scholarship',
-      provider: 'Education Department, Bihar',
-      amount: 'Tuition fee support',
-      deadline: new Date(Date.now() + 1000 * 60 * 60 * 24 * 60),
-      states: ['Bihar'],
-      courses: ['10+2', 'UG', 'PG'],
-      categories: ['SC', 'ST', 'OBC', 'EBC'],
-      incomeLimit: 200000,
-      yearLevels: ['Post Matric'],
-      requiredDocuments: ['Residence Certificate', 'Caste Certificate', 'Income Certificate'],
-      description: 'Support for Bihar students pursuing studies after matriculation.',
-    }
-  ]
-  await Scholarship.insertMany(samples)
+  await Scholarship.insertMany(scholarships)
 
-  console.log('Seed complete: created admin and sample scholarships')
+  console.log(`Seed complete: created admin, student, and ${scholarships.length} real scholarships`)
   process.exit(0)
 }
 

@@ -1,0 +1,77 @@
+/* src/styles/theme.css */
+/* CSS variables for dynamic color themes. The root element will receive a data-theme attribute set to one of the theme names. */
+
+:root {
+  /* Default – Indigo */
+  --primary: #6366f1;          /* indigo-500 */
+  --primary-dark: #4f46e5;     /* indigo-600 */
+  --secondary: #10b981;        /* emerald-500 */
+  --secondary-dark: #059669;   /* emerald-600 */
+  --accent: #f97316;           /* orange-500 */
+  --accent-dark: #ea580c;      /* orange-600 */
+  --text: #f3f4f6;            /* gray-100 */
+  --bg: #111827;              /* gray-900 */
+}
+
+[data-theme="indigo"] {
+  --primary: #6366f1;
+  --primary-dark: #4f46e5;
+  --secondary: #10b981;
+  --secondary-dark: #059669;
+  --accent: #f97316;
+  --accent-dark: #ea580c;
+}
+
+[data-theme="emerald"] {
+  --primary: #10b981;
+  --primary-dark: #059669;
+  --secondary: #6366f1;
+  --secondary-dark: #4f46e5;
+  --accent: #f97316;
+  --accent-dark: #ea580c;
+}
+
+[data-theme="sunset"] {
+  --primary: #f97316;   /* orange */
+  --primary-dark: #ea580c;
+  --secondary: #ec4899; /* pink */
+  --secondary-dark: #db2777;
+  --accent: #6366f1;    /* indigo */
+  --accent-dark: #4f46e5;
+}
+
+[data-theme="cyberpunk"] {
+  --primary: #ec4899;   /* pink */
+  --primary-dark: #db2777;
+  --secondary: #22d3ee; /* cyan */
+  --secondary-dark: #06b6d4;
+  --accent: #f97316;    /* orange */
+  --accent-dark: #ea580c;
+}
+
+[data-theme="amethyst"] {
+  --primary: #8b5cf6;   /* violet */
+  --primary-dark: #7c3aed;
+  --secondary: #6366f1; /* indigo */
+  --secondary-dark: #4f46e5;
+  --accent: #10b981;    /* emerald */
+  --accent-dark: #059669;
+}
+
+/* Utility classes using the variables */
+.bg-primary { background-color: var(--primary); }
+.bg-primary-dark:hover { background-color: var(--primary-dark); }
+.text-primary { color: var(--primary); }
+.border-primary { border-color: var(--primary); }
+
+.bg-secondary { background-color: var(--secondary); }
+.bg-secondary-dark:hover { background-color: var(--secondary-dark); }
+.text-secondary { color: var(--secondary); }
+.border-secondary { border-color: var(--secondary); }
+
+.bg-accent { background-color: var(--accent); }
+.bg-accent-dark:hover { background-color: var(--accent-dark); }
+.text-accent { color: var(--accent); }
+
+.text-primary-muted { color: var(--text); }
+.bg-app { background-color: var(--bg); color: var(--text); }
