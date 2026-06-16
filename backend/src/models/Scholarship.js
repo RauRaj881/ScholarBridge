@@ -12,11 +12,12 @@ const EligibilitySchema = new mongoose.Schema(
 );
 
 const ScholarshipSchema = new mongoose.Schema({
-  title: String,
-  provider: String,
+  title: { type: String, required: true },
+  provider: { type: String, required: true },
   amount: String,
   deadline: Date,
   eligibility: EligibilitySchema, // nested eligibility sub‑document
+  
   // Top-level fields for backwards compatibility with frontend & legacy seed scripts
   states: [{ type: String }],
   courses: [{ type: String }],
@@ -25,14 +26,21 @@ const ScholarshipSchema = new mongoose.Schema({
   yearLevels: [{ type: String }],
   requiredDocuments: [String],
   applicationLink: String,
-  status: { type: String, default: 'Open' },
+  
+  // UPDATED FOR ADMINISTRATIVE PLATFORM CONTROLS:
+  // Changed default to 'active' (instead of 'Open') and added 'expired' validation constraint.
+  status: { type: String, enum: ['active', 'expired'], default: 'active' }, 
   tags: [String],
   description: String,
   featured: { type: Boolean, default: false },
+  
   // Metadata fields for live ingestion tracking
   sourcePortal: { type: String, enum: ['NSP', 'Bihar-PMS', 'Private', 'Manual'], default: 'Manual' },
   externalLink: String,
-  isLive: { type: Boolean, default: false }
+  
+  // UPDATED FOR ADMINISTRATIVE PLATFORM CONTROLS:
+  // Changed default to true so manually added admin entries display on student feeds instantly!
+  isLive: { type: Boolean, default: true } 
 }, { timestamps: true });
 
 // Design separate database indexes to optimize filter speed (avoiding parallel array multikey limitations)

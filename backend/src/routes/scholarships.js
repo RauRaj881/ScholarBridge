@@ -1,5 +1,7 @@
 import express from 'express';
 import mongoose from 'mongoose';
+import Application from '../models/Application.js';
+import Activity from '../models/Activity.js';
 
 const router = express.Router();
 
@@ -24,9 +26,7 @@ const ScholarshipSchema = new mongoose.Schema(
     provider: { type: String, required: true },
     amount: String,
     deadline: Date,
-    eligibility: EligibilitySchema, // Nested eligibility sub‑document
-    
-    // Top-level fields for backwards compatibility with frontend & legacy seed scripts
+    eligibility: EligibilitySchema,
     states: [{ type: String }],
     courses: [{ type: String }],
     categories: [{ type: String }],
@@ -34,101 +34,93 @@ const ScholarshipSchema = new mongoose.Schema(
     yearLevels: [{ type: String }],
     requiredDocuments: [String],
     applicationLink: String,
-    status: { type: String, default: 'Open' },
+    status: { type: String, enum: ['active', 'expired'], default: 'active' },
     tags: [String],
     description: String,
     featured: { type: Boolean, default: false },
-    
-    // Metadata fields for live ingestion tracking
     sourcePortal: { type: String, enum: ['NSP', 'Bihar-PMS', 'Private', 'Manual'], default: 'Manual' },
     externalLink: String,
-    isLive: { type: Boolean, default: false }
+    isLive: { type: Boolean, default: true }
   }, 
   { timestamps: true }
 );
 
-// Optimize database search speeds (avoiding parallel array multikey restrictions)
 ScholarshipSchema.index({ 'eligibility.states': 1 });
 ScholarshipSchema.index({ 'eligibility.categories': 1 });
 
-// Automatically sync top-level and nested eligibility fields during atomic database operations
 ScholarshipSchema.pre('save', function (next) {
   if (!this.eligibility) {
     this.eligibility = {};
   }
-
-  // Sync states
   if (this.states && this.states.length) {
     this.eligibility.states = this.states;
   } else if (this.eligibility.states && this.eligibility.states.length) {
     this.states = this.eligibility.states;
   }
-
-  // Sync courses
   if (this.courses && this.courses.length) {
     this.eligibility.courses = this.courses;
   } else if (this.eligibility.courses && this.eligibility.courses.length) {
     this.courses = this.eligibility.courses;
   }
-
-  // Sync categories
   if (this.categories && this.categories.length) {
     this.eligibility.categories = this.categories;
   } else if (this.eligibility.categories && this.eligibility.categories.length) {
     this.categories = this.eligibility.categories;
   }
-
-  // Sync incomeLimit
   if (this.incomeLimit !== undefined) {
     this.eligibility.incomeLimit = this.incomeLimit;
   } else if (this.eligibility.incomeLimit !== undefined) {
     this.incomeLimit = this.eligibility.incomeLimit;
   }
-
-  // Sync yearLevels <-> yearLevel (convert array to single string / vice versa)
   if (this.yearLevels && this.yearLevels.length) {
     this.eligibility.yearLevel = this.yearLevels[0];
   } else if (this.eligibility.yearLevel) {
     this.yearLevels = [this.eligibility.yearLevel];
   }
-
   next();
 });
 
-// Enforce model compiling patterns safely
 const Scholarship = mongoose.models.Scholarship || mongoose.model('Scholarship', ScholarshipSchema);
 
+const logActivity = async (userId, action, details) => {
+  try {
+    if (!userId) return;
+    await Activity.create({ userId, action, details });
+  } catch (err) {
+    console.error('❌ Activity trace writing failure:', err.message);
+  }
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 2. EXPRESS CONTROLLER ROUTING ENDPOINTS
+// 3. EXPRESS CONTROLLER ROUTING ENDPOINTS
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * @route   GET /api/scholarships
- * @desc    Fetch active ingestion opportunities to populate the frontend Overview grid
+ * @desc    FEATURE 4: Fetch active, live scholarships, including legacy database records
  */
 router.get('/', async (req, res) => {
   try {
-    // 1. Look for live, automated ingestion pipeline opportunities first
-    let catalog = await Scholarship.find({ isLive: true }).sort({ featured: -1 }).lean();
+    // Finds items where (isLive is true OR doesn't exist) AND (status is active OR doesn't exist)
+    const activeCatalog = await Scholarship.find({
+      $and: [
+        { isLive: { $ne: false } },
+        { status: { $ne: 'expired' } }
+      ]
+    })
+    .sort({ featured: -1, createdAt: -1 })
+    .lean();
     
-    // 2. Safe Fallback: If the scraper hasn't run or collection is clearing, pull all items
-    if (!catalog || catalog.length === 0) {
-      catalog = await Scholarship.find({}).sort({ createdAt: -1 }).lean();
-    }
-    
-    // 3. Object Wrapper Interface: Sends the keys exactly matching 'r.data.scholarships'
     return res.json({ 
       success: true,
-      scholarships: catalog 
+      scholarships: activeCatalog 
     });
   } catch (error) {
-    console.error('❌ Base Catalog Routing Error [GET /]:', error.message);
+    console.error('❌ Student Catalog Error:', error.message);
     return res.status(500).json({ 
       success: false, 
       scholarships: [],
-      message: 'Failed to extract active scholarship options',
-      error: error.message 
+      message: 'Failed to balance active dashboard items' 
     });
   }
 });
@@ -139,30 +131,110 @@ router.get('/', async (req, res) => {
  */
 router.post('/eligibility', async (req, res) => {
   try {
-    const { state, category, course, income } = req.body;
-    
-    // Build filter target query
-    const filterQuery = { isLive: true };
+    const { state, category, course, income, userId } = req.body;
+    const filterQuery = {};
 
     if (state) {
-      filterQuery['eligibility.states'] = state;
+      filterQuery['eligibility.states'] = { $in: [state, 'All', 'all'] };
     }
     if (category) {
-      filterQuery['eligibility.categories'] = category;
+      filterQuery['eligibility.categories'] = { $in: [category, 'All', 'all'] };
     }
     if (course) {
-      filterQuery['eligibility.courses'] = course;
+      filterQuery['eligibility.courses'] = { $in: [course, 'All', 'all'] };
     }
     if (income) {
-      // Find entries where student's annual household income sits under the scholarship limit
       filterQuery['eligibility.incomeLimit'] = { $gte: Number(income) };
     }
 
-    const filteredRecords = await Scholarship.find(filterQuery).lean();
-    return res.json(filteredRecords);
+    const filteredRecords = await Scholarship.find(filterQuery).sort({ featured: -1 }).lean();
+    
+    if (userId) {
+      await logActivity(
+        userId,
+        'Checked Eligibility',
+        `Criteria: State [${state || 'Any'}], Course [${course || 'Any'}], Income Boundary [₹${income || 'Any'}]`
+      );
+    }
+
+    return res.json({
+      success: true,
+      count: filteredRecords.length,
+      scholarships: filteredRecords
+    });
   } catch (error) {
     console.error('❌ Eligibility Filter Exception [POST /eligibility]:', error.message);
     return res.status(500).json({ success: false, message: 'Database filtering exception' });
+  }
+});
+
+/**
+ * @route   POST /api/scholarships/apply
+ * @desc    Submit a user application record for tracking inside the workflow dashboard
+ */
+router.post('/apply', async (req, res) => {
+  try {
+    const { userId, scholarshipId } = req.body;
+
+    if (!userId || !scholarshipId) {
+      return res.status(400).json({ success: false, message: 'Missing user reference or target scholarship identification' });
+    }
+
+    const existingApplication = await Application.findOne({ userId, scholarshipId });
+    if (existingApplication) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'You have already submitted an active application tracker for this scholarship scheme.' 
+      });
+    }
+
+    const newApplication = new Application({
+      userId,
+      scholarshipId,
+      status: 'submitted',
+      nextAction: 'Awaiting administrative credentials assessment'
+    });
+
+    await newApplication.save();
+
+    const targetScholarship = await Scholarship.findById(scholarshipId).select('title').lean();
+    await logActivity(
+      userId,
+      'Submitted Application',
+      `Applied for Scheme: ${targetScholarship?.title || 'Unknown Portal'}`
+    );
+
+    return res.json({
+      success: true,
+      message: 'Application workflow established and tracked successfully',
+      application: newApplication
+    });
+  } catch (error) {
+    console.error('❌ Application Submission Tracking Error [POST /apply]:', error.message);
+    return res.status(500).json({ success: false, message: 'Failed to process target tracking intent' });
+  }
+});
+
+/**
+ * @route   GET /api/scholarships/applications/:userId
+ * @desc    Fetch all active historical tracker states for an individual logged-in student
+ */
+router.get('/applications/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    const trackingHistory = await Application.find({ userId })
+      .populate('scholarshipId', 'title provider amount deadline status')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return res.json({
+      success: true,
+      applications: trackingHistory
+    });
+  } catch (error) {
+    console.error('❌ Workflow Application Retrieval Error [GET /applications/:userId]:', error.message);
+    return res.status(500).json({ success: false, message: 'Failed to collect dashboard workflow instances' });
   }
 });
 

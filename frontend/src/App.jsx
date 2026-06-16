@@ -3,16 +3,18 @@ import axios from 'axios'
 import Login from './Login'
 import Register from './Register'
 import Scholarships from './Scholarships'
+import AdminDashboard from './AdminDashboard'
 import Nav from './Nav'
 
 export default function App() {
   const [user, setUser] = useState(null)
   const [showRegister, setShowRegister] = useState(false)
+  const [adminView, setAdminView] = useState('metrics') // 'metrics' or 'scholarships'
 
   useEffect(() => {
-    axios.get('/api/health').catch(() => {})
-    // try to load current user
-    axios.get('/api/auth/me').then((r) => setUser(r.data.user)).catch(() => {})
+    axios.get('/api/auth/me')
+      .then((r) => setUser(r.data.user))
+      .catch(() => setUser(null))
   }, [])
 
   if (!user) {
@@ -23,10 +25,30 @@ export default function App() {
     )
   }
 
+  // Check if the current view is the admin control center metrics workspace dashboard
+  const isAdminDashboardActive = user.role === 'admin' && adminView === 'metrics'
+
   return (
     <div className="app-shell">
-      <Nav user={user} onLogout={() => setUser(null)} />
-      <Scholarships user={user} />
+      {/* Renders global standard Nav bar layout only if the admin dashboard layout is NOT active */}
+      {!isAdminDashboardActive && (
+        <Nav user={user} onLogout={() => setUser(null)} onViewChange={setAdminView} />
+      )}
+      
+      <main className="main-content-panel">
+        {user.role === 'admin' ? (
+          adminView === 'metrics' ? (
+            <AdminDashboard 
+              onOpenScholarships={() => setAdminView('scholarships')} 
+              onLogout={() => setUser(null)} 
+            />
+          ) : (
+            <Scholarships user={user} />
+          )
+        ) : (
+          <Scholarships user={user} />
+        )}
+      </main>
     </div>
   )
 }
