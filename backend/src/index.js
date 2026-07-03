@@ -20,8 +20,6 @@ import adminRoutes from './routes/admin.js';
 import notificationRoutes from './routes/notifications.js';
 import importRoutes from './routes/import.js';
 
-import { fetchLiveScholarships } from './services/ingestionWorker.js';
-
 const app = express();
 const port = process.env.PORT || 4000;
 
@@ -34,7 +32,6 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/schola
 mongoose.connect(MONGODB_URI, { autoIndex: true })
   .then(() => {
     console.log('MongoDB connected');
-    fetchLiveScholarships().catch(err => console.error('Ingestion worker error:', err));
   })
   .catch((err) => console.error('MongoDB error', err));
 

@@ -3,13 +3,14 @@ import { requireAuth, requireAdmin } from '../middleware/auth.js';
 import User from '../models/User.js';
 import Scholarship from '../models/Scholarship.js';
 import Activity from '../models/Activity.js'; 
+import { buildVisibleScholarshipQuery } from '../utils/scholarshipVisibility.js';
 
 const router = express.Router();
 
 // FEATURE 1: Admin logs/adds a brand new scholarship scheme
 router.post('/scholarships', requireAuth, requireAdmin, async (req, res) => {
   try {
-    const { title, provider, amount, deadline, description } = req.body;
+    const { title, provider, amount, deadline, description, applicationLink } = req.body;
 
     if (!title || !provider) {
       return res.status(400).json({ success: false, message: 'Title and provider are required.' });
@@ -21,6 +22,7 @@ router.post('/scholarships', requireAuth, requireAdmin, async (req, res) => {
       amount,
       deadline: deadline ? new Date(deadline) : null,
       description,
+      applicationLink,
       status: 'active',
       isLive: true, // Visible to students immediately
       sourcePortal: 'Manual'
@@ -80,12 +82,7 @@ router.get('/metrics', requireAuth, requireAdmin, async (req, res) => {
     const totalStudents = await User.countDocuments({ role: 'student' });
     
     // Counts items where isLive is NOT false AND status is NOT expired
-    const totalActiveSchemes = await Scholarship.countDocuments({
-      $and: [
-        { isLive: { $ne: false } },
-        { status: { $ne: 'expired' } }
-      ]
-    });
+    const totalActiveSchemes = await Scholarship.countDocuments(buildVisibleScholarshipQuery());
     
     return res.json({ users: totalUsers, students: totalStudents, scholarships: totalActiveSchemes, applications: 0 });
   } catch (error) {

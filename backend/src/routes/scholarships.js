@@ -1,93 +1,53 @@
-import express from 'express';
-import mongoose from 'mongoose';
-import Application from '../models/Application.js';
-import Activity from '../models/Activity.js';
+import express from "express";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+import Application from "../models/Application.js";
+import Activity from "../models/Activity.js";
+import Scholarship from "../models/Scholarship.js";
+import { buildVisibleScholarshipQuery } from "../utils/scholarshipVisibility.js";
+import { requireAuth } from "../middleware/auth.js";
 
 const router = express.Router();
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 1. DATABASE SCHEMA & MODEL DEFINITIONS
+// FILE UPLOAD CONFIG — application documents
 // ─────────────────────────────────────────────────────────────────────────────
 
-const EligibilitySchema = new mongoose.Schema(
-  {
-    states: [{ type: String }],
-    courses: [{ type: String }],
-    categories: [{ type: String }],
-    incomeLimit: { type: Number },
-    yearLevel: { type: String },
+const uploadsDir = path.join(process.cwd(), "uploads", "applications");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, uploadsDir),
+  filename: (req, file, cb) => {
+    const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}${path.extname(file.originalname)}`;
+    cb(null, unique);
   },
-  { _id: false }
-);
-
-const ScholarshipSchema = new mongoose.Schema(
-  {
-    title: { type: String, required: true },
-    provider: { type: String, required: true },
-    amount: String,
-    deadline: Date,
-    eligibility: EligibilitySchema,
-    states: [{ type: String }],
-    courses: [{ type: String }],
-    categories: [{ type: String }],
-    incomeLimit: { type: Number },
-    yearLevels: [{ type: String }],
-    requiredDocuments: [String],
-    applicationLink: String,
-    status: { type: String, enum: ['active', 'expired'], default: 'active' },
-    tags: [String],
-    description: String,
-    featured: { type: Boolean, default: false },
-    sourcePortal: { type: String, enum: ['NSP', 'Bihar-PMS', 'Private', 'Manual'], default: 'Manual' },
-    externalLink: String,
-    isLive: { type: Boolean, default: true }
-  }, 
-  { timestamps: true }
-);
-
-ScholarshipSchema.index({ 'eligibility.states': 1 });
-ScholarshipSchema.index({ 'eligibility.categories': 1 });
-
-ScholarshipSchema.pre('save', function (next) {
-  if (!this.eligibility) {
-    this.eligibility = {};
-  }
-  if (this.states && this.states.length) {
-    this.eligibility.states = this.states;
-  } else if (this.eligibility.states && this.eligibility.states.length) {
-    this.states = this.eligibility.states;
-  }
-  if (this.courses && this.courses.length) {
-    this.eligibility.courses = this.courses;
-  } else if (this.eligibility.courses && this.eligibility.courses.length) {
-    this.courses = this.eligibility.courses;
-  }
-  if (this.categories && this.categories.length) {
-    this.eligibility.categories = this.categories;
-  } else if (this.eligibility.categories && this.eligibility.categories.length) {
-    this.categories = this.eligibility.categories;
-  }
-  if (this.incomeLimit !== undefined) {
-    this.eligibility.incomeLimit = this.incomeLimit;
-  } else if (this.eligibility.incomeLimit !== undefined) {
-    this.incomeLimit = this.eligibility.incomeLimit;
-  }
-  if (this.yearLevels && this.yearLevels.length) {
-    this.eligibility.yearLevel = this.yearLevels[0];
-  } else if (this.eligibility.yearLevel) {
-    this.yearLevels = [this.eligibility.yearLevel];
-  }
-  next();
 });
 
-const Scholarship = mongoose.models.Scholarship || mongoose.model('Scholarship', ScholarshipSchema);
+const upload = multer({
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: (req, file, cb) => {
+    const allowed = [
+      "application/pdf",
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+    ];
+    if (allowed.includes(file.mimetype)) return cb(null, true);
+    cb(new Error("Only PDF or image files are accepted"));
+  },
+});
 
 const logActivity = async (userId, action, details) => {
   try {
     if (!userId) return;
     await Activity.create({ userId, action, details });
   } catch (err) {
-    console.error('❌ Activity trace writing failure:', err.message);
+    console.error("❌ Activity trace writing failure:", err.message);
   }
 };
 
@@ -99,28 +59,22 @@ const logActivity = async (userId, action, details) => {
  * @route   GET /api/scholarships
  * @desc    FEATURE 4: Fetch active, live scholarships, including legacy database records
  */
-router.get('/', async (req, res) => {
+router.get("/", async (req, res) => {
   try {
-    // Finds items where (isLive is true OR doesn't exist) AND (status is active OR doesn't exist)
-    const activeCatalog = await Scholarship.find({
-      $and: [
-        { isLive: { $ne: false } },
-        { status: { $ne: 'expired' } }
-      ]
-    })
-    .sort({ featured: -1, createdAt: -1 })
-    .lean();
-    
-    return res.json({ 
+    const activeCatalog = await Scholarship.find(buildVisibleScholarshipQuery())
+      .sort({ featured: -1, createdAt: -1 })
+      .lean();
+
+    return res.json({
       success: true,
-      scholarships: activeCatalog 
+      scholarships: activeCatalog,
     });
   } catch (error) {
-    console.error('❌ Student Catalog Error:', error.message);
-    return res.status(500).json({ 
-      success: false, 
+    console.error("❌ Student Catalog Error:", error.message);
+    return res.status(500).json({
+      success: false,
       scholarships: [],
-      message: 'Failed to balance active dashboard items' 
+      message: "Failed to balance active dashboard items",
     });
   }
 });
@@ -129,112 +83,199 @@ router.get('/', async (req, res) => {
  * @route   POST /api/scholarships/eligibility
  * @desc    Execute index-optimized matching checks across data arrays for the Eligibility component
  */
-router.post('/eligibility', async (req, res) => {
+router.post("/eligibility", async (req, res) => {
   try {
     const { state, category, course, income, userId } = req.body;
     const filterQuery = {};
 
     if (state) {
-      filterQuery['eligibility.states'] = { $in: [state, 'All', 'all'] };
+      filterQuery["eligibility.states"] = { $in: [state, "All", "all"] };
     }
     if (category) {
-      filterQuery['eligibility.categories'] = { $in: [category, 'All', 'all'] };
+      filterQuery["eligibility.categories"] = { $in: [category, "All", "all"] };
     }
     if (course) {
-      filterQuery['eligibility.courses'] = { $in: [course, 'All', 'all'] };
+      filterQuery["eligibility.courses"] = { $in: [course, "All", "all"] };
     }
     if (income) {
-      filterQuery['eligibility.incomeLimit'] = { $gte: Number(income) };
+      filterQuery["eligibility.incomeLimit"] = { $gte: Number(income) };
     }
 
-    const filteredRecords = await Scholarship.find(filterQuery).sort({ featured: -1 }).lean();
-    
+    const filteredRecords = await Scholarship.find(
+      buildVisibleScholarshipQuery(filterQuery),
+    )
+      .sort({ featured: -1 })
+      .lean();
+
     if (userId) {
       await logActivity(
         userId,
-        'Checked Eligibility',
-        `Criteria: State [${state || 'Any'}], Course [${course || 'Any'}], Income Boundary [₹${income || 'Any'}]`
+        "Checked Eligibility",
+        `Criteria: State [${state || "Any"}], Course [${course || "Any"}], Income Boundary [₹${income || "Any"}]`,
       );
     }
 
     return res.json({
       success: true,
       count: filteredRecords.length,
-      scholarships: filteredRecords
+      scholarships: filteredRecords,
     });
   } catch (error) {
-    console.error('❌ Eligibility Filter Exception [POST /eligibility]:', error.message);
-    return res.status(500).json({ success: false, message: 'Database filtering exception' });
+    console.error(
+      "❌ Eligibility Filter Exception [POST /eligibility]:",
+      error.message,
+    );
+    return res
+      .status(500)
+      .json({ success: false, message: "Database filtering exception" });
   }
 });
 
 /**
- * @route   POST /api/scholarships/apply
- * @desc    Submit a user application record for tracking inside the workflow dashboard
+ * @route   POST /api/scholarships/:id/apply
+ * @desc    Authenticated student submits an application with a supporting document
+ *          for a specific scholarship. Replaces the old unauthenticated JSON-only /apply route.
  */
-router.post('/apply', async (req, res) => {
-  try {
-    const { userId, scholarshipId } = req.body;
-
-    if (!userId || !scholarshipId) {
-      return res.status(400).json({ success: false, message: 'Missing user reference or target scholarship identification' });
+router.post("/:id/apply", requireAuth, (req, res) => {
+  upload.single("documents")(req, res, async (uploadErr) => {
+    if (uploadErr) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: uploadErr.message || "File upload failed",
+        });
     }
 
-    const existingApplication = await Application.findOne({ userId, scholarshipId });
-    if (existingApplication) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'You have already submitted an active application tracker for this scholarship scheme.' 
+    try {
+      const scholarshipId = req.params.id;
+      const userId = req.user._id;
+
+      const scholarship = await Scholarship.findById(scholarshipId)
+        .select("title status")
+        .lean();
+      if (!scholarship) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Scholarship not found" });
+      }
+      if (scholarship.status === "expired") {
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message: "This scholarship is no longer accepting applications.",
+          });
+      }
+
+      const existingApplication = await Application.findOne({
+        userId,
+        scholarshipId,
       });
+      if (existingApplication) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "You have already submitted an active application tracker for this scholarship scheme.",
+        });
+      }
+
+      const documents = [];
+      if (req.file) {
+        documents.push({
+          originalName: req.file.originalname,
+          fileName: req.file.filename,
+          path: `/uploads/applications/${req.file.filename}`,
+          size: req.file.size,
+          mimeType: req.file.mimetype,
+        });
+      }
+
+      const newApplication = new Application({
+        userId,
+        scholarshipId,
+        status: "submitted",
+        nextAction: "Awaiting administrative credentials assessment",
+        documents,
+      });
+
+      await newApplication.save();
+
+      await logActivity(
+        userId,
+        "Submitted Application",
+        `Applied for Scheme: ${scholarship.title}`,
+      );
+
+      return res.json({
+        success: true,
+        message: "Application workflow established and tracked successfully",
+        application: newApplication,
+      });
+    } catch (error) {
+      console.error(
+        "❌ Application Submission Tracking Error [POST /:id/apply]:",
+        error.message,
+      );
+      return res
+        .status(500)
+        .json({
+          success: false,
+          message: "Failed to process target tracking intent",
+        });
     }
-
-    const newApplication = new Application({
-      userId,
-      scholarshipId,
-      status: 'submitted',
-      nextAction: 'Awaiting administrative credentials assessment'
-    });
-
-    await newApplication.save();
-
-    const targetScholarship = await Scholarship.findById(scholarshipId).select('title').lean();
-    await logActivity(
-      userId,
-      'Submitted Application',
-      `Applied for Scheme: ${targetScholarship?.title || 'Unknown Portal'}`
-    );
-
-    return res.json({
-      success: true,
-      message: 'Application workflow established and tracked successfully',
-      application: newApplication
-    });
-  } catch (error) {
-    console.error('❌ Application Submission Tracking Error [POST /apply]:', error.message);
-    return res.status(500).json({ success: false, message: 'Failed to process target tracking intent' });
-  }
+  });
 });
 
 /**
  * @route   GET /api/scholarships/applications/:userId
  * @desc    Fetch all active historical tracker states for an individual logged-in student
  */
-router.get('/applications/:userId', async (req, res) => {
+router.get("/applications/:userId", async (req, res) => {
   try {
     const { userId } = req.params;
-    
+
     const trackingHistory = await Application.find({ userId })
-      .populate('scholarshipId', 'title provider amount deadline status')
+      .populate("scholarshipId", "title provider amount deadline status")
       .sort({ createdAt: -1 })
       .lean();
 
     return res.json({
       success: true,
-      applications: trackingHistory
+      applications: trackingHistory,
     });
   } catch (error) {
-    console.error('❌ Workflow Application Retrieval Error [GET /applications/:userId]:', error.message);
-    return res.status(500).json({ success: false, message: 'Failed to collect dashboard workflow instances' });
+    console.error(
+      "❌ Workflow Application Retrieval Error [GET /applications/:userId]:",
+      error.message,
+    );
+    return res
+      .status(500)
+      .json({
+        success: false,
+        message: "Failed to collect dashboard workflow instances",
+      });
+  }
+});
+
+/**
+ * @route   GET /api/scholarships/:id
+ * @desc    Fetch a single scholarship's full details for the dedicated detail page
+ */
+router.get("/:id", async (req, res) => {
+  try {
+    const scholarship = await Scholarship.findById(req.params.id).lean();
+    if (!scholarship) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Scholarship not found" });
+    }
+    return res.json({ success: true, scholarship });
+  } catch (error) {
+    console.error("❌ Scholarship Detail Fetch Error:", error.message);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to fetch scholarship details" });
   }
 });
 

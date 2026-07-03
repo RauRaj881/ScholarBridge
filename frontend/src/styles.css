@@ -1,16 +1,16 @@
 :root {
-	--bg: #07111f;
-	--bg-radial: rgba(89, 111, 253, 0.28);
-	--panel: rgba(10, 18, 34, 0.82);
-	--panel-2: rgba(14, 26, 47, 0.94);
-	--text: #eef4ff;
-	--muted: #9eb0cc;
+	--bg: #05070d;
+	--bg-radial: rgba(99, 102, 241, 0.25);
+	--panel: rgba(12, 16, 28, 0.85);
+	--panel-2: rgba(16, 21, 35, 0.95);
+	--text: #f1f5f9;
+	--muted: #94a3c4;
 	--accent: #6ea8fe;
-	--accent-gradient: linear-gradient(135deg, #6ea8fe, #8b5cf6);
-	--border: rgba(148, 163, 184, 0.18);
-	--pill-bg: rgba(110, 168, 254, 0.14);
-	--pill-text: #cfe0ff;
-	--glow: rgba(118, 54, 118, 0.35);
+	--accent-gradient: linear-gradient(135deg, #6366f1, #22d3ee);
+	--border: rgba(148, 163, 184, 0.16);
+	--pill-bg: rgba(99, 102, 241, 0.16);
+	--pill-text: #c7d2fe;
+	--glow: rgba(99, 102, 241, 0.4);
 }
 
 [data-theme="emerald"] {
@@ -1060,4 +1060,169 @@ select.theme-switcher option {
 @media (max-width: 768px) {
 	.hero, .topbar, .section-head, .detail-header { flex-direction: column; align-items: start; }
 	.topbar-actions, .hero-actions { justify-content: start; flex-wrap: wrap; }
+}
+/* ========== SCHOLARSHIP DETAIL PAGE ========== */
+
+.scholarship-page {
+	padding-top: 8px;
+}
+
+.back-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	background: rgba(255,255,255,0.06);
+	border: 1px solid var(--border);
+	color: var(--text);
+	padding: 10px 16px;
+	border-radius: 12px;
+	font-size: 13.5px;
+	font-weight: 600;
+	margin-bottom: 16px;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.back-btn:hover {
+	background: var(--pill-bg);
+	border-color: var(--accent);
+	transform: translateX(-2px);
+}
+
+.scholarship-detail-page {
+	max-width: 820px;
+	margin: 0 auto;
+}
+
+.page-loading-state {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 12px;
+	padding: 80px 24px;
+}
+
+/* ========== LANGUAGE SWITCHER ========== */
+
+.lang-switcher-wrap {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	background: rgba(255,255,255,0.06);
+	border: 1px solid var(--border);
+	border-radius: 10px;
+	padding: 0 4px 0 10px;
+}
+
+.lang-switcher-icon {
+	color: var(--accent);
+	flex-shrink: 0;
+}
+
+.lang-switcher-wrap select.theme-switcher {
+	background: transparent;
+	border: none;
+	padding: 8px 8px 8px 4px;
+}
+/* ========== SEARCH & FILTER BAR ========== */
+
+.search-filter-row {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	flex-wrap: wrap;
+}
+
+.search-input-wrap {
+	position: relative;
+	display: flex;
+	align-items: center;
+}
+
+.search-input-icon {
+	position: absolute;
+	left: 12px;
+	color: var(--muted);
+	pointer-events: none;
+}
+
+.search-input {
+	padding: 10px 14px 10px 36px;
+	margin: 0;
+	min-width: 240px;
+	border-radius: 12px;
+}
+
+.quick-filter-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.quick-filter-chip {
+	background: rgba(255,255,255,0.05);
+	border: 1px solid var(--border);
+	color: var(--muted);
+	padding: 7px 14px;
+	border-radius: 999px;
+	font-size: 12.5px;
+	font-weight: 600;
+	margin: 0;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	white-space: nowrap;
+}
+
+.quick-filter-chip:hover {
+	border-color: var(--accent);
+	color: var(--text);
+}
+
+.quick-filter-chip.active {
+	background: var(--accent-gradient);
+	border-color: transparent;
+	color: #fff;
+}
+
+/* ========== DEADLINE URGENCY BADGE ========== */
+
+.urgency-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	margin-top: 10px;
+	padding: 4px 10px;
+	border-radius: 999px;
+	font-size: 11.5px;
+	font-weight: 700;
+	width: fit-content;
+}
+
+/* ========== SKELETON LOADING CARDS ========== */
+
+@keyframes skeletonPulse {
+	0%, 100% { opacity: 0.5; }
+	50% { opacity: 1; }
+}
+
+.skeleton-card {
+	cursor: default;
+	pointer-events: none;
+}
+
+.skeleton-line {
+	background: rgba(255,255,255,0.06);
+	border-radius: 6px;
+	height: 10px;
+	margin-bottom: 10px;
+	animation: skeletonPulse 1.4s ease-in-out infinite;
+}
+
+.skeleton-icon {
+	width: 40px;
+	height: 40px;
+	border-radius: 12px;
+	margin-bottom: 16px;
 }

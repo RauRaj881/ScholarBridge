@@ -4,6 +4,7 @@ import axios from 'axios'
 export default function AdminPanel({ onDone }) {
   const [items, setItems] = useState([])
   const [title, setTitle] = useState('')
+  const [applicationLink, setApplicationLink] = useState('')
   const [csvFile, setCsvFile] = useState(null)
   const [importing, setImporting] = useState(false)
 
@@ -12,8 +13,9 @@ export default function AdminPanel({ onDone }) {
 
   async function create() {
     try {
-      await axios.post('/api/scholarships', { title })
+      await axios.post('/api/admin/scholarships', { title, provider: 'Manual Entry', applicationLink })
       setTitle('')
+      setApplicationLink('')
       load()
     } catch (err) { alert(err.response?.data?.message || 'Error') }
   }
@@ -21,7 +23,7 @@ export default function AdminPanel({ onDone }) {
   async function remove(id) {
     if (!confirm('Delete?')) return
     try {
-      await axios.delete('/api/scholarships/' + id)
+      await axios.delete('/api/admin/scholarships/' + id)
       load()
     } catch (err) { alert(err.response?.data?.message || 'Error') }
   }
@@ -51,6 +53,7 @@ export default function AdminPanel({ onDone }) {
       </div>
       <div>
         <input placeholder="title" value={title} onChange={e=>setTitle(e.target.value)} />
+        <input placeholder="application url" value={applicationLink} onChange={e=>setApplicationLink(e.target.value)} style={{marginLeft:8}} />
         <button className="primary" onClick={create}>Create</button>
         <button onClick={onDone} style={{marginLeft:8}}>Done</button>
       </div>

@@ -1,6 +1,7 @@
 import express from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import Scholarship from '../models/Scholarship.js';
+import { buildVisibleScholarshipQuery } from '../utils/scholarshipVisibility.js';
 import { GoogleGenAI } from '@google/genai';
 
 const router = express.Router();
@@ -170,7 +171,7 @@ router.post('/recommend', requireAuth, async (req, res) => {
       });
     }
 
-    const query = { status: 'Open' };
+    const query = buildVisibleScholarshipQuery();
     if (andConditions.length > 0) {
       query.$and = andConditions;
     }
@@ -180,7 +181,7 @@ router.post('/recommend', requireAuth, async (req, res) => {
 
     // Fallback: If no scholarships match this specific criteria, load open scholarships
     if (!scholarships || scholarships.length === 0) {
-      scholarships = await Scholarship.find({ status: 'Open' }).limit(10).lean();
+      scholarships = await Scholarship.find(buildVisibleScholarshipQuery()).limit(10).lean();
     }
 
     const systemPrompt = `You are "ScholarBridge AI", an AI recommendation engine.

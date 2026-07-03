@@ -1,5 +1,10 @@
 import mongoose from 'mongoose';
 
+const normalizeScholarshipStatus = (status) => {
+  if (status === 'expired') return 'expired';
+  return 'active';
+};
+
 const EligibilitySchema = new mongoose.Schema(
   {
     states: [{ type: String }],
@@ -28,7 +33,7 @@ const ScholarshipSchema = new mongoose.Schema({
   applicationLink: String,
   
   // UPDATED FOR ADMINISTRATIVE PLATFORM CONTROLS:
-  // Changed default to 'active' (instead of 'Open') and added 'expired' validation constraint.
+  // Normalized to a single active/expired workflow across the app.
   status: { type: String, enum: ['active', 'expired'], default: 'active' }, 
   tags: [String],
   description: String,
@@ -42,6 +47,11 @@ const ScholarshipSchema = new mongoose.Schema({
   // Changed default to true so manually added admin entries display on student feeds instantly!
   isLive: { type: Boolean, default: true } 
 }, { timestamps: true });
+
+ScholarshipSchema.pre('validate', function (next) {
+  this.status = normalizeScholarshipStatus(this.status);
+  next();
+});
 
 // Design separate database indexes to optimize filter speed (avoiding parallel array multikey limitations)
 ScholarshipSchema.index({ 'eligibility.states': 1 });

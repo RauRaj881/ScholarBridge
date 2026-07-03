@@ -18,6 +18,7 @@ export default function AdminDashboard({ onOpenScholarships, onLogout }) {
   const [amount, setAmount] = useState('')
   const [deadline, setDeadline] = useState('')
   const [description, setDescription] = useState('')
+  const [applicationLink, setApplicationLink] = useState('')
 
   useEffect(() => {
     refreshDashboardData()
@@ -51,9 +52,9 @@ export default function AdminDashboard({ onOpenScholarships, onLogout }) {
     e.preventDefault()
     if (!title || !provider) return alert('Scheme Name and Provider are required!')
     try {
-      const res = await axios.post('/api/admin/scholarships', { title, provider, amount, deadline, description })
+      const res = await axios.post('/api/admin/scholarships', { title, provider, amount, deadline, description, applicationLink })
       if (res.data.success) {
-        setTitle(''); setProvider(''); setAmount(''); setDeadline(''); setDescription('');
+        setTitle(''); setProvider(''); setAmount(''); setDeadline(''); setDescription(''); setApplicationLink('')
         alert('🎉 Scholarship added to catalog successfully!')
         refreshDashboardData()
       }
@@ -197,6 +198,7 @@ export default function AdminDashboard({ onOpenScholarships, onLogout }) {
             <input type="text" placeholder="Funding Provider / Ministry *" value={provider} onChange={e => setProvider(e.target.value)} style={{ padding: '14px 16px', background: '#09090b', border: '1px solid rgba(255,255,255,0.06)', color: '#fff', borderRadius: '10px', fontSize: '14px', outline: 'none' }} required />
             <input type="text" placeholder="Grant Amount (e.g., ₹50,000)" value={amount} onChange={e => setAmount(e.target.value)} style={{ padding: '14px 16px', background: '#09090b', border: '1px solid rgba(255,255,255,0.06)', color: '#fff', borderRadius: '10px', fontSize: '14px', outline: 'none' }} />
             <input type="date" value={deadline} onChange={e => setDeadline(e.target.value)} style={{ padding: '14px 16px', background: '#09090b', border: '1px solid rgba(255,255,255,0.06)', color: '#a6adc8', borderRadius: '10px', fontSize: '14px', outline: 'none' }} />
+            <input type="url" placeholder="Application URL (official link)" value={applicationLink} onChange={e => setApplicationLink(e.target.value)} style={{ gridColumn: '1 / span 2', padding: '14px 16px', background: '#09090b', border: '1px solid rgba(255,255,255,0.06)', color: '#fff', borderRadius: '10px', fontSize: '14px', outline: 'none' }} />
             <textarea placeholder="Brief description of eligibility criteria and documentation requirements..." value={description} onChange={e => setDescription(e.target.value)} rows="3" style={{ gridColumn: '1 / span 2', padding: '14px 16px', background: '#09090b', border: '1px solid rgba(255,255,255,0.06)', color: '#fff', borderRadius: '10px', fontSize: '14px', outline: 'none', resize: 'none' }} />
             <div style={{ gridColumn: '1 / span 2', textAlign: 'right' }}>
               <button type="submit" style={{ padding: '14px 32px', background: 'linear-gradient(135deg, #7928ca 0%, #ff007f 100%)', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: '700', cursor: 'pointer', fontSize: '14px', boxShadow: '0 4px 20px rgba(255, 0, 127, 0.3)' }}>💾 Save & Publish Live Model</button>
@@ -260,6 +262,11 @@ export default function AdminDashboard({ onOpenScholarships, onLogout }) {
                     <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#585b70' }} />
                     <span style={{ color: '#a6e3a1', fontWeight: '700' }}>{s.amount || 'Variable Fund'}</span>
                   </div>
+                  {s.applicationLink && (
+                    <a href={s.applicationLink} target="_blank" rel="noreferrer" style={{ display: 'inline-block', marginTop: '6px', color: '#89b4fa', fontSize: '12px', textDecoration: 'none' }}>
+                      Open application link
+                    </a>
+                  )}
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button onClick={() => handleMarkExpired(s._id)} style={{ padding: '8px 14px', background: 'rgba(245, 158, 11, 0.12)', border: '1px solid rgba(245, 158, 11, 0.2)', borderRadius: '8px', cursor: 'pointer', color: '#f59e0b', fontSize: '12px', fontWeight: '700', transition: 'all 0.2s' }} onMouseOver={e => { e.currentTarget.style.background = '#f59e0b'; e.currentTarget.style.color = '#11111b'; }} onMouseOut={e => { e.currentTarget.style.background = 'rgba(245, 158, 11, 0.12)'; e.currentTarget.style.color = '#f59e0b'; }}>Expire</button>
