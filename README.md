@@ -51,3 +51,17 @@ Next tasks you can request:
 - Add file upload to cloud storage (S3)
 - Add richer frontend routing and styling
 - Add tests and CI
+
+## 📸 Screenshots
+
+### Student Dashboard
+![Student Portal](./screenshots/student-dashboard.png)
+
+### Open Opportunities
+![Opportunities](./screenshots/opportunities.png)
+
+### Scholarship AI Assistant
+![AI Assistant](./screenshots/ai-assistant.png)
+
+### Admin Platform Control
+![Admin Dashboard](./screenshots/admin-console.png)
